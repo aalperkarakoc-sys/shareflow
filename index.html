@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ShareFlow">
+<meta name="theme-color" content="#1C2F45">
+<title>ShareFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg1: #1C2F45;
+    --bg2: #2D1F4E;
+    --accent: #7BD3EA;
+    --accent-dark: #1C2F45;
+    --glass: rgba(255,255,255,0.07);
+    --glass-border: rgba(255,255,255,0.13);
+    --card: rgba(255,255,255,0.11);
+    --card-border: rgba(255,255,255,0.18);
+    --text: #ffffff;
+    --muted: rgba(255,255,255,0.5);
+    --hint: rgba(255,255,255,0.3);
+    --success: #5edb8a;
+    --r: 16px;
+    --rl: 24px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; overflow:hidden; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 55%, var(--bg1) 100%);
+    display:flex; justify-content:center; align-items:flex-start;
+  }
+  .app {
+    width:100%; max-width:430px; height:100vh;
+    position:relative; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+
+  /* SCREENS */
+  .screen {
+    display:none; flex-direction:column;
+    width:100%; height:100%; overflow-y:auto; overflow-x:hidden;
+    -webkit-overflow-scrolling:touch; padding-bottom:80px;
+    animation: fadeUp 0.3s ease;
+  }
+  .screen.active { display:flex; }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(10px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* STATUS BAR */
+  .sbar {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 24px 0; flex-shrink:0;
+    font-size:15px; font-weight:600; color:var(--text);
+  }
+  .sbar span { font-size:12px; color:rgba(255,255,255,0.7); }
+
+  /* GLASS */
+  .glass { background:var(--glass); border:1px solid var(--glass-border); border-radius:var(--rl); }
+  .card { background:var(--card); border:1px solid var(--card-border); border-radius:20px; }
+
+  /* BUTTONS */
+  .btn-primary {
+    width:100%; padding:15px;
+    background:linear-gradient(135deg, var(--accent), #5bb8d4);
+    border:none; border-radius:14px;
+    color:var(--accent-dark); font-size:16px; font-weight:700;
+    cursor:pointer; font-family:'DM Sans',sans-serif;
+    box-shadow:0 4px 20px rgba(123,211,234,0.3);
+    transition:all 0.2s;
+  }
+  .btn-primary:active { transform:scale(0.98); }
+
+  .btn-outline {
+    background:none; border:1px solid var(--glass-border);
+    color:var(--muted); padding:13px 32px;
+    border-radius:12px; font-size:14px; cursor:pointer;
+    font-family:'DM Sans',sans-serif; transition:all 0.2s;
+  }
+  .btn-outline:active { color:var(--text); }
+
+  /* HEXAGON */
+  .hex {
+    clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700;
+  }
+
+  /* TAB BAR */
+  .tabbar {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:430px;
+    display:flex; justify-content:space-around;
+    padding:12px 0 max(12px, env(safe-area-inset-bottom));
+    background:rgba(20,28,45,0.95);
+    border-top:1px solid rgba(255,255,255,0.07);
+    z-index:100; backdrop-filter:blur(20px);
+  }
+  .tab {
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    opacity:0.4; cursor:pointer; transition:opacity 0.2s; padding:4px 16px;
+    border:none; background:none;
+  }
+  .tab.active { opacity:1; }
+  .tab svg { width:22px; height:22px; }
+  .tab-lbl { font-size:10px; color:rgba(255,255,255,0.6); font-family:'DM Sans',sans-serif; }
+  .tab.active .tab-lbl { color:var(--accent); }
+
+  /* NOTIFICATION TOAST */
+  .toast {
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(8px);
+    background:rgba(20,28,45,0.95); border:1px solid var(--glass-border);
+    border-radius:14px; padding:12px 20px;
+    font-size:13px; color:var(--text); white-space:nowrap;
+    opacity:0; transition:all 0.3s; z-index:200; pointer-events:none;
+    max-width:90%;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ==================== LOGIN ==================== */
+  #s-login { padding-bottom:30px; }
+  .login-hero { padding:40px 28px 0; text-align:center; }
+  .app-logo {
+    width:72px; height:72px;
+    background:linear-gradient(135deg, var(--accent), #5bb8d4);
+    border-radius:20px; margin:0 auto 18px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 12px 32px rgba(123,211,234,0.35);
+  }
+  .app-name { font-family:'Syne',sans-serif; font-size:32px; font-weight:700; color:var(--text); letter-spacing:-1px; }
+  .app-tag { font-size:15px; color:var(--muted); margin-top:8px; line-height:1.5; }
+  .pills { display:flex; justify-content:center; gap:6px; margin-top:14px; flex-wrap:wrap; }
+  .pill { padding:5px 11px; background:var(--glass); border:1px solid var(--glass-border); border-radius:20px; font-size:11px; color:var(--muted); }
+  .login-card { margin:24px 20px 0; padding:22px 18px; }
+  .social-btn {
+    width:100%; padding:14px 16px; border-radius:14px;
+    border:1px solid var(--glass-border); background:var(--glass);
+    color:var(--text); font-size:15px; font-weight:500;
+    display:flex; align-items:center; gap:12px;
+    cursor:pointer; margin-bottom:10px; font-family:'DM Sans',sans-serif;
+    transition:background 0.2s;
+  }
+  .social-btn:active { background:rgba(255,255,255,0.12); }
+  .divider { display:flex; align-items:center; gap:12px; margin:14px 0; }
+  .div-line { flex:1; height:1px; background:var(--glass-border); }
+  .div-txt { font-size:12px; color:var(--hint); }
+  .inp {
+    width:100%; padding:14px 16px;
+    background:rgba(255,255,255,0.06); border:1px solid var(--glass-border);
+    border-radius:12px; color:var(--text); font-size:15px;
+    font-family:'DM Sans',sans-serif; outline:none;
+    transition:border-color 0.2s; margin-bottom:10px; display:block;
+  }
+  .inp::placeholder { color:var(--hint); }
+  .inp:focus { border-color:rgba(123,211,234,0.5); }
+  .guest-link { text-align:center; padding:16px; color:var(--muted); font-size:14px; cursor:pointer; }
+
+  /* ==================== MAIN ==================== */
+  .topbar { padding:14px 24px 0; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+  .greeting { font-size:20px; font-weight:600; color:var(--text); }
+  .greeting span { color:var(--accent); }
+  .avatar-btn {
+    width:40px; height:40px; border-radius:50%;
+    background:linear-gradient(135deg, var(--accent), #5bb8d4);
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:700; color:var(--accent-dark); cursor:pointer;
+  }
+  .upload-zone {
+    margin:18px 20px 0;
+    background:rgba(123,211,234,0.06);
+    border:1.5px dashed rgba(123,211,234,0.35);
+    border-radius:20px; padding:28px 20px; text-align:center; cursor:pointer;
+    transition:all 0.25s;
+  }
+  .upload-zone:active { background:rgba(123,211,234,0.1); transform:scale(0.99); }
+  .upload-zone.has-file { background:rgba(123,211,234,0.1); border-style:solid; border-color:rgba(123,211,234,0.5); }
+  .uz-icon { font-size:36px; margin-bottom:10px; }
+  .uz-title { font-size:16px; font-weight:500; color:var(--text); margin-bottom:5px; }
+  .uz-sub { font-size:13px; color:var(--muted); }
+  #file-input { display:none; }
+  .sec-label { padding:18px 24px 10px; font-size:11px; font-weight:600; color:var(--hint); letter-spacing:1.2px; text-transform:uppercase; }
+  .plat-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; padding:0 20px; }
+  .plat-item { display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; }
+  .plat-icon {
+    width:54px; height:54px; border-radius:16px;
+    display:flex; align-items:center; justify-content:center;
+    border:1.5px solid rgba(255,255,255,0.08);
+    transition:all 0.2s; position:relative; overflow:hidden;
+  }
+  .plat-item.sel .plat-icon { border-color:var(--accent); box-shadow:0 0 0 3px rgba(123,211,234,0.2); transform:scale(1.05); }
+  .plat-item.sel .chk { opacity:1; }
+  .chk {
+    position:absolute; top:3px; right:3px;
+    width:17px; height:17px; background:var(--accent); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity 0.2s; font-size:9px; color:var(--accent-dark); font-weight:700;
+  }
+  .plat-lbl { font-size:10px; color:var(--muted); text-align:center; font-weight:500; }
+  .plat-item.sel .plat-lbl { color:var(--accent); }
+  .p-tt { background:#010101; }
+  .p-ig { background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285AEB 90%); }
+  .p-yt { background:#c4302b; }
+  .p-tw { background:#14171a; }
+  .p-tg { background:#229ED9; }
+  .caption-row { margin:14px 20px 0; }
+  .cap-toggle {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:13px 16px; cursor:pointer;
+  }
+  .cap-lbl { font-size:14px; color:var(--muted); }
+  .cap-badge { font-size:10px; padding:3px 8px; background:rgba(123,211,234,0.15); color:var(--accent); border-radius:8px; font-weight:600; }
+  .share-btn {
+    margin:14px 20px 0; width:calc(100% - 40px); padding:17px;
+    background:linear-gradient(135deg, var(--accent), #5bb8d4);
+    border:none; border-radius:16px;
+    color:var(--accent-dark); font-size:16px; font-weight:700;
+    cursor:pointer; font-family:'DM Sans',sans-serif;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    box-shadow:0 6px 24px rgba(123,211,234,0.3); transition:all 0.2s;
+  }
+  .share-btn:active { transform:scale(0.98); }
+  .prem-card {
+    margin:12px 20px 0; padding:14px 16px;
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+  .prem-info { flex:1; }
+  .prem-title { font-size:13px; font-weight:600; color:var(--text); }
+  .prem-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+  .prem-cta { font-size:14px; font-weight:700; color:var(--accent); }
+
+  /* ==================== UPLOADING ==================== */
+  #s-uploading { justify-content:center; align-items:center; padding:40px 28px; }
+  .upl-anim {
+    width:80px; height:80px; border-radius:50%; margin:0 auto 24px;
+    background:rgba(123,211,234,0.1); border:2px solid rgba(123,211,234,0.3);
+    display:flex; align-items:center; justify-content:center; font-size:32px;
+    animation:pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(123,211,234,0.3); }
+    50% { transform:scale(1.05); box-shadow:0 0 0 16px rgba(123,211,234,0); }
+  }
+  .upl-title { font-size:22px; font-weight:600; color:var(--text); margin-bottom:8px; text-align:center; }
+  .upl-sub { font-size:14px; color:var(--muted); margin-bottom:32px; text-align:center; }
+  .prog-list { width:100%; max-width:300px; }
+  .prog-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .prog-emoji { font-size:18px; width:24px; text-align:center; }
+  .prog-name { font-size:14px; color:rgba(255,255,255,0.75); flex:1; }
+  .prog-status { font-size:12px; }
+  .prog-status.wait { color:var(--hint); }
+  .prog-status.upl { color:var(--accent); }
+  .prog-status.done { color:var(--success); }
+
+  /* ==================== SUCCESS ==================== */
+  #s-success { align-items:center; padding:60px 28px 30px; }
+  .succ-circle {
+    width:80px; height:80px;
+    background:linear-gradient(135deg, var(--accent), #5bb8d4);
+    border-radius:50%; margin-bottom:20px;
+    display:flex; align-items:center; justify-content:center; font-size:36px;
+    box-shadow:0 12px 32px rgba(123,211,234,0.35);
+    animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes popIn { from{transform:scale(0);opacity:0;} to{transform:scale(1);opacity:1;} }
+  .succ-title { font-family:'Syne',sans-serif; font-size:28px; font-weight:700; color:var(--text); margin-bottom:8px; text-align:center; }
+  .succ-sub { font-size:15px; color:var(--muted); text-align:center; line-height:1.6; margin-bottom:24px; }
+  .res-card { width:100%; padding:4px 0; margin-bottom:14px; }
+  .res-row { display:flex; align-items:center; gap:12px; padding:11px 16px; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .res-row:last-child { border-bottom:none; }
+  .res-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .res-dot.ok { background:var(--success); }
+  .res-name { font-size:14px; color:rgba(255,255,255,0.8); flex:1; }
+  .res-badge { font-size:11px; padding:3px 8px; border-radius:8px; font-weight:600; }
+  .res-badge.ok { background:rgba(94,219,138,0.15); color:var(--success); }
+  .wa-card {
+    width:100%; background:rgba(37,211,102,0.08); border:1px solid rgba(37,211,102,0.25);
+    border-radius:16px; padding:14px 16px; margin-bottom:12px;
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+  .wa-info { flex:1; }
+  .wa-title { font-size:14px; font-weight:600; color:var(--text); }
+  .wa-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  /* ==================== FEED ==================== */
+  #s-feed { padding-bottom:80px; }
+  .feed-topbar { display:flex; justify-content:space-between; align-items:center; padding:14px 24px 0; flex-shrink:0; }
+  .feed-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; color:var(--text); }
+  .feed-title span { color:var(--accent); }
+  .feed-notif { width:34px; height:34px; border-radius:50%; background:var(--glass); border:1px solid var(--glass-border); display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer; }
+  .feed-list { padding:14px 16px 0; display:flex; flex-direction:column; gap:12px; }
+  .feed-post { padding:14px; }
+  .fp-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .fp-meta { flex:1; }
+  .fp-name { font-size:14px; font-weight:700; }
+  .fp-time { font-size:11px; color:var(--muted); margin-top:2px; }
+  .fp-circles { display:flex; gap:14px; align-items:flex-start; padding:0 2px; }
+  .fp-circle-item { display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer; }
+  .fp-circle {
+    width:82px; height:82px; border-radius:50%;
+    overflow:hidden; border:2.5px solid rgba(255,255,255,0.12);
+    transition:transform 0.2s, border-color 0.2s; flex-shrink:0;
+  }
+  .fp-circle:active { transform:scale(0.94); border-color:rgba(123,211,234,0.6); }
+  .fp-circle-bg {
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:30px; filter:blur(6px); transform:scale(1.1);
+  }
+  .fp-logo { width:28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; }
+  .fp-pname { font-size:9px; color:rgba(255,255,255,0.45); font-weight:500; text-align:center; }
+  .fp-hint { font-size:9px; color:rgba(255,255,255,0.2); text-align:center; margin-top:6px; }
+
+  /* ==================== HISTORY ==================== */
+  #s-history { padding-bottom:80px; }
+  .hist-header { padding:20px 24px 0; font-family:'Syne',sans-serif; font-size:24px; font-weight:700; color:var(--text); flex-shrink:0; }
+  .hist-list { padding:14px 20px 0; }
+  .hist-item { padding:14px 16px; margin-bottom:10px; cursor:pointer; border-radius:16px; }
+  .hist-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .hist-title { font-size:14px; font-weight:500; color:var(--text); }
+  .hist-date { font-size:11px; color:var(--hint); }
+  .hist-badges { display:flex; gap:6px; flex-wrap:wrap; }
+  .hbadge { font-size:11px; padding:3px 8px; border-radius:8px; font-weight:500; background:rgba(94,219,138,0.12); color:var(--success); }
+  .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-icon { font-size:48px; margin-bottom:16px; opacity:0.5; }
+
+  /* ==================== SETTINGS ==================== */
+  #s-settings { padding-bottom:80px; }
+  .set-header { padding:20px 24px 0; font-family:'Syne',sans-serif; font-size:24px; font-weight:700; color:var(--text); flex-shrink:0; }
+  .upgrade-card { margin:16px 20px 0; padding:20px; background:linear-gradient(135deg,rgba(123,211,234,0.12),rgba(91,184,212,0.08)); border:1px solid rgba(123,211,234,0.25); border-radius:20px; }
+  .uc-top { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .uc-title { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; color:var(--text); }
+  .uc-price { font-size:13px; color:var(--accent); font-weight:600; }
+  .uc-feat { font-size:13px; color:var(--muted); padding:4px 0; display:flex; align-items:center; gap:8px; }
+  .uc-feat::before { content:"✓"; color:var(--accent); font-weight:700; font-size:12px; }
+  .set-section { font-size:11px; font-weight:600; color:var(--hint); letter-spacing:1.2px; text-transform:uppercase; padding:18px 24px 8px; }
+  .set-item { display:flex; align-items:center; gap:14px; padding:13px 20px; cursor:pointer; transition:background 0.2s; margin:0 10px; border-radius:12px; }
+  .set-item:active { background:var(--glass); }
+  .set-icon { width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .set-info { flex:1; }
+  .set-title { font-size:14px; font-weight:500; color:var(--text); }
+  .set-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+  .set-arrow { font-size:14px; color:var(--hint); }
+  .set-divider { height:1px; background:var(--glass-border); margin:8px 20px; }
+
+  /* AD MODAL */
+  .modal-wrap {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.7); z-index:300;
+    justify-content:center; align-items:flex-end;
+    padding:20px;
+  }
+  .modal-wrap.active { display:flex; }
+  .ad-modal { background:linear-gradient(160deg,#1C2F45,#2D1F4E); border:1px solid var(--glass-border); border-radius:24px; padding:24px 20px; width:100%; max-width:400px; text-align:center; }
+  .ad-label { font-size:11px; color:var(--hint); letter-spacing:1px; text-transform:uppercase; margin-bottom:16px; }
+  .ad-box { background:var(--glass); border:1px solid var(--glass-border); border-radius:16px; padding:28px 20px; margin-bottom:16px; }
+  .ad-icon { font-size:48px; margin-bottom:12px; }
+  .ad-title { font-size:18px; font-weight:600; color:var(--text); margin-bottom:6px; }
+  .ad-desc { font-size:13px; color:var(--muted); }
+  .ad-timer { font-size:13px; color:var(--muted); margin-bottom:16px; }
+  .ad-timer b { color:var(--accent); }
+  .ad-skip { background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; font-family:'DM Sans',sans-serif; padding:8px; }
+  .ad-skip:disabled { opacity:0.4; cursor:not-allowed; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ==================== LOGIN ==================== -->
+  <div class="screen active" id="s-login">
+    <div class="sbar"><span id="clk">9:41</span><span>●●● WiFi 🔋</span></div>
+    <div class="login-hero">
+      <div class="app-logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="18" r="12" fill="rgba(28,47,69,0.6)"/>
+          <circle cx="10" cy="11" r="4" fill="#1C2F45"/>
+          <circle cx="26" cy="11" r="4" fill="#1C2F45"/>
+          <circle cx="26" cy="25" r="4" fill="#1C2F45"/>
+          <line x1="13.5" y1="12.5" x2="22.5" y2="12.5" stroke="#1C2F45" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="22.5" y1="12.5" x2="22.5" y2="21.5" stroke="#1C2F45" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="app-name">ShareFlow</div>
+      <div class="app-tag">Tek tıkla tüm platformlara paylaş</div>
+      <div class="pills">
+        <span class="pill">TikTok</span><span class="pill">Instagram</span>
+        <span class="pill">YouTube</span><span class="pill">Telegram</span><span class="pill">Twitter/X</span>
+      </div>
+    </div>
+    <div class="glass login-card">
+      <button class="social-btn" onclick="login('Google')">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Google ile devam et
+      </button>
+      <button class="social-btn" onclick="login('Apple')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Apple ile devam et
+      </button>
+      <div class="divider"><div class="div-line"></div><span class="div-txt">veya e-posta ile</span><div class="div-line"></div></div>
+      <input class="inp" type="email" placeholder="E-posta adresi">
+      <input class="inp" type="password" placeholder="Şifre">
+      <button class="btn-primary" onclick="login('email')">Giriş Yap</button>
+    </div>
+    <div class="guest-link" onclick="login('Misafir')">Misafir olarak devam et →</div>
+  </div>
+
+  <!-- ==================== MAIN ==================== -->
+  <div class="screen" id="s-main">
+    <div class="sbar"><span id="clk2">9:41</span><span>●●● WiFi 🔋</span></div>
+    <div class="topbar">
+      <div class="greeting">Merhaba, <span id="uname">Kullanıcı</span> 👋</div>
+      <div class="avatar-btn" id="av">K</div>
+    </div>
+    <input type="file" id="file-input" accept="video/*,image/*" onchange="handleFile(this)">
+    <div class="upload-zone" id="uz" onclick="document.getElementById('file-input').click()">
+      <div class="uz-icon" id="uz-icon">🎬</div>
+      <div class="uz-title" id="uz-title">Video veya görsel seç</div>
+      <div class="uz-sub" id="uz-sub">Galeriden seç • Kamera ile çek</div>
+    </div>
+    <div class="sec-label">PLATFORM SEÇ</div>
+    <div class="plat-grid">
+      <div class="plat-item sel" onclick="toggleP(this,'TikTok')" data-p="TikTok">
+        <div class="plat-icon p-tt"><div class="chk">✓</div><svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.3 6.3 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.17 8.17 0 004.77 1.52V6.76a4.85 4.85 0 01-1-.07z"/></svg></div>
+        <span class="plat-lbl">TikTok</span>
+      </div>
+      <div class="plat-item sel" onclick="toggleP(this,'Instagram')" data-p="Instagram">
+        <div class="plat-icon p-ig"><div class="chk">✓</div><svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+        <span class="plat-lbl">Instagram</span>
+      </div>
+      <div class="plat-item" onclick="toggleP(this,'YouTube')" data-p="YouTube">
+        <div class="plat-icon p-yt"><div class="chk">✓</div><svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg></div>
+        <span class="plat-lbl">YouTube</span>
+      </div>
+      <div class="plat-item sel" onclick="toggleP(this,'Twitter')" data-p="Twitter">
+        <div class="plat-icon p-tw"><div class="chk">✓</div><svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></div>
+        <span class="plat-lbl">Twitter/X</span>
+      </div>
+      <div class="plat-item" onclick="toggleP(this,'Telegram')" data-p="Telegram">
+        <div class="plat-icon p-tg"><div class="chk">✓</div><svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></div>
+        <span class="plat-lbl">Telegram</span>
+      </div>
+    </div>
+    <div class="caption-row">
+      <div class="glass cap-toggle" onclick="showToast('Premium özellik — $1/ay ile aç 👑')">
+        <span class="cap-lbl">Platforma özel açıklama yaz</span>
+        <span class="cap-badge">PREMIUM</span>
+      </div>
+    </div>
+    <button class="share-btn" onclick="startShare()">⚡ <span id="sbtn-txt">Şimdi Paylaş (3 platform)</span></button>
+    <div class="glass prem-card" onclick="switchTab('settings')">
+      <span style="font-size:20px">👑</span>
+      <div class="prem-info">
+        <div class="prem-title">Premium'a geç</div>
+        <div class="prem-sub">Tüm platformlar, reklamsız</div>
+      </div>
+      <div class="prem-cta">$1/ay</div>
+    </div>
+  </div>
+
+  <!-- ==================== UPLOADING ==================== -->
+  <div class="screen" id="s-uploading">
+    <div class="upl-anim">⚡</div>
+    <div class="upl-title">Yükleniyor...</div>
+    <div class="upl-sub">İçeriğin platformlara gönderiliyor</div>
+    <div class="prog-list" id="prog-list"></div>
+  </div>
+
+  <!-- ==================== SUCCESS ==================== -->
+  <div class="screen" id="s-success">
+    <div class="succ-circle">✓</div>
+    <div class="succ-title">Paylaşıldı! 🎉</div>
+    <div class="succ-sub" id="succ-sub">İçeriğin başarıyla yüklendi.</div>
+    <div class="glass res-card" id="res-list"></div>
+    <div class="wa-card" id="wa-card" style="display:none">
+      <span style="font-size:26px">💬</span>
+      <div class="wa-info">
+        <div class="wa-title">WhatsApp'a da paylaş</div>
+        <div class="wa-sub">Instagram'dan tek tıkla aktar →</div>
+      </div>
+    </div>
+    <button class="btn-outline" onclick="switchTab('main')" style="margin-top:8px">← Yeni paylaşım yap</button>
+  </div>
+
+  <!-- ==================== FEED ==================== -->
+  <div class="screen" id="s-feed">
+    <div class="sbar"><span>9:41</span><span>●●● WiFi 🔋</span></div>
+    <div class="feed-topbar">
+      <div class="feed-title">Share<span>Flow</span></div>
+      <div class="feed-notif">🔔</div>
+    </div>
+    <div class="feed-list">
+
+      <div class="card feed-post">
+        <div class="fp-header">
+          <div class="hex" style="width:42px;height:42px;background:linear-gradient(135deg,#f472b6,#a855f7);font-size:15px;color:#fff">A</div>
+          <div class="fp-meta">
+            <div class="fp-name" style="background:linear-gradient(90deg,#f472b6,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Ayşe Kaya</div>
+            <div class="fp-time">2 dakika önce · 2 platformda</div>
+          </div>
+        </div>
+        <div class="fp-circles">
+          <div class="fp-circle-item" onclick="showToast('TikTok açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#ff6b6b,#feca57,#48dbfb)">🎵</div></div>
+            <div class="fp-logo" style="background:#010101"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.3 6.3 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.17 8.17 0 004.77 1.52V6.76a4.85 4.85 0 01-1-.07z"/></svg></div>
+            <span class="fp-pname">TikTok</span>
+          </div>
+          <div class="fp-circle-item" onclick="showToast('Instagram açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045)">📸</div></div>
+            <div class="fp-logo" style="background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285AEB 90%)"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4z"/></svg></div>
+            <span class="fp-pname">Instagram</span>
+          </div>
+        </div>
+        <div class="fp-hint">👆 Daire üstüne tıkla</div>
+      </div>
+
+      <div class="card feed-post">
+        <div class="fp-header">
+          <div class="hex" style="width:42px;height:42px;background:linear-gradient(135deg,#00b894,#00cec9);font-size:15px;color:#fff">M</div>
+          <div class="fp-meta">
+            <div class="fp-name" style="background:linear-gradient(90deg,#00b894,#7BD3EA);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Mehmet Yılmaz</div>
+            <div class="fp-time">15 dakika önce · 3 platformda</div>
+          </div>
+        </div>
+        <div class="fp-circles">
+          <div class="fp-circle-item" onclick="showToast('YouTube Shorts açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#c4302b,#ff6b6b,#feca57)">🎬</div></div>
+            <div class="fp-logo" style="background:#c4302b"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg></div>
+            <span class="fp-pname">YouTube</span>
+          </div>
+          <div class="fp-circle-item" onclick="showToast('Twitter/X açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#636e72,#74b9ff)">🐦</div></div>
+            <div class="fp-logo" style="background:#14171a"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.748l7.73-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></div>
+            <span class="fp-pname">Twitter/X</span>
+          </div>
+          <div class="fp-circle-item" onclick="showToast('Telegram açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#229ED9,#a29bfe)">✈️</div></div>
+            <div class="fp-logo" style="background:#229ED9"><svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></div>
+            <span class="fp-pname">Telegram</span>
+          </div>
+        </div>
+        <div class="fp-hint">👆 Daire üstüne tıkla</div>
+      </div>
+
+      <div class="card feed-post">
+        <div class="fp-header">
+          <div class="hex" style="width:42px;height:42px;background:linear-gradient(135deg,#a855f7,#6366f1);font-size:15px;color:#fff">Z</div>
+          <div class="fp-meta">
+            <div class="fp-name" style="background:linear-gradient(90deg,#a855f7,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Zeynep Arslan</div>
+            <div class="fp-time">1 saat önce · 3 platformda</div>
+          </div>
+        </div>
+        <div class="fp-circles">
+          <div class="fp-circle-item" onclick="showToast('TikTok açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#ff9ff3,#feca57,#ff6b6b)">🌸</div></div>
+            <div class="fp-logo" style="background:#010101"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.3 6.3 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.17 8.17 0 004.77 1.52V6.76a4.85 4.85 0 01-1-.07z"/></svg></div>
+            <span class="fp-pname">TikTok</span>
+          </div>
+          <div class="fp-circle-item" onclick="showToast('YouTube açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#ee5a24,#feca57)">🎥</div></div>
+            <div class="fp-logo" style="background:#c4302b"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg></div>
+            <span class="fp-pname">YouTube</span>
+          </div>
+          <div class="fp-circle-item" onclick="showToast('Instagram açılıyor...')">
+            <div class="fp-circle"><div class="fp-circle-bg" style="background:linear-gradient(135deg,#fd79a8,#6c5ce7,#fdcb6e)">🌅</div></div>
+            <div class="fp-logo" style="background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fd5949 45%,#d6249f 60%,#285AEB 90%)"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4z"/></svg></div>
+            <span class="fp-pname">Instagram</span>
+          </div>
+        </div>
+        <div class="fp-hint">👆 Daire üstüne tıkla</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== HISTORY ==================== -->
+  <div class="screen" id="s-history">
+    <div class="sbar"><span>9:41</span><span>●●● WiFi 🔋</span></div>
+    <div class="hist-header">Geçmiş</div>
+    <div class="hist-list" id="hist-list">
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div style="font-size:15px;color:var(--muted)">Henüz paylaşım yok</div>
+        <div style="font-size:13px;color:var(--hint);margin-top:6px">İlk paylaşımını yap!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS ==================== -->
+  <div class="screen" id="s-settings">
+    <div class="sbar"><span>9:41</span><span>●●● WiFi 🔋</span></div>
+    <div class="set-header">Ayarlar</div>
+    <div class="upgrade-card">
+      <div class="uc-top">
+        <span style="font-size:24px">👑</span>
+        <div><div class="uc-title">ShareFlow Premium</div><div class="uc-price">Sadece $1/ay</div></div>
+      </div>
+      <div class="uc-feat">Tüm 5 platform</div>
+      <div class="uc-feat">Sıfır reklam</div>
+      <div class="uc-feat">Platforma özel açıklama</div>
+      <div class="uc-feat">Sınırsız paylaşım</div>
+      <button class="btn-primary" style="margin-top:14px" onclick="showToast('Yakında! 🚀')">Premium'a Geç</button>
+    </div>
+    <div class="set-section">HESAPLAR</div>
+    <div class="set-item" onclick="showToast('TikTok bağlantısı yakında!')">
+      <div class="set-icon p-tt" style="border-radius:11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.3 6.3 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.17 8.17 0 004.77 1.52V6.76a4.85 4.85 0 01-1-.07z"/></svg></div>
+      <div class="set-info"><div class="set-title">TikTok</div><div class="set-sub">Bağlı değil</div></div>
+      <span class="set-arrow">→</span>
+    </div>
+    <div class="set-item" onclick="showToast('Instagram bağlantısı yakında!')">
+      <div class="set-icon p-ig" style="border-radius:11px"><svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4z"/></svg></div>
+      <div class="set-info"><div class="set-title">Instagram</div><div class="set-sub">Bağlı değil</div></div>
+      <span class="set-arrow">→</span>
+    </div>
+    <div class="set-divider"></div>
+    <div class="set-section">UYGULAMA</div>
+    <div class="set-item" onclick="showToast('Bildirimler açık ✓')">
+      <div class="set-icon" style="background:var(--glass);border:1px solid var(--glass-border)">🔔</div>
+      <div class="set-info"><div class="set-title">Bildirimler</div><div class="set-sub">Açık</div></div>
+      <span class="set-arrow">→</span>
+    </div>
+    <div class="set-item" onclick="logout()">
+      <div class="set-icon" style="background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.2)">🚪</div>
+      <div class="set-info"><div class="set-title" style="color:#f87171">Çıkış Yap</div></div>
+      <span class="set-arrow">→</span>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tabbar" id="tabbar" style="display:none">
+    <button class="tab active" onclick="switchTab('main')" id="tab-main">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <span class="tab-lbl">Paylaş</span>
+    </button>
+    <button class="tab" onclick="switchTab('feed')" id="tab-feed">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <span class="tab-lbl">Feed</span>
+    </button>
+    <button class="tab" onclick="switchTab('history')" id="tab-history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="tab-lbl">Geçmiş</span>
+    </button>
+    <button class="tab" onclick="switchTab('settings')" id="tab-settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+      <span class="tab-lbl">Ayarlar</span>
+    </button>
+  </div>
+
+  <!-- AD MODAL -->
+  <div class="modal-wrap" id="ad-modal">
+    <div class="ad-modal">
+      <div class="ad-label">REKLAM • ÜCRETSİZ PLAN</div>
+      <div class="ad-box">
+        <div class="ad-icon">🛍️</div>
+        <div class="ad-title">Harika Fırsatlar!</div>
+        <div class="ad-desc">Bu reklamı izleyerek ShareFlow'u ücretsiz kullanabilirsin.</div>
+      </div>
+      <div class="ad-timer">Atlamak için <b id="ad-count">5</b> saniye bekle</div>
+      <button class="ad-skip" id="ad-skip" disabled onclick="closeAd()">Reklamı Geç →</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+</div>
+<script>
+  let selPlatforms = ['TikTok','Instagram','Twitter'];
+  let history2 = [];
+  let adTimer;
+  let currentTab = 'main';
+
+  // Clock
+  function tick() {
+    const n = new Date();
+    const t = n.getHours()+':'+String(n.getMinutes()).padStart(2,'0');
+    document.querySelectorAll('#clk,#clk2').forEach(e=>e.textContent=t);
+  }
+  tick(); setInterval(tick,30000);
+
+  // Login
+  function login(method) {
+    const n = {Google:'Google',Apple:'Apple',email:'Kullanıcı',Misafir:'Misafir'}[method]||'Kullanıcı';
+    document.getElementById('uname').textContent = n;
+    document.getElementById('av').textContent = n[0].toUpperCase();
+    document.getElementById('tabbar').style.display = 'flex';
+    goScreen('main');
+    switchTab('main');
+  }
+
+  // Screen nav
+  function goScreen(id) {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    const el = document.getElementById('s-'+id);
+    if(el) el.classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    goScreen(tab);
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    const el = document.getElementById('tab-'+tab);
+    if(el) el.classList.add('active');
+  }
+
+  // Platform toggle
+  function toggleP(el, name) {
+    if(!el.classList.contains('sel') && selPlatforms.length >= 3) {
+      showToast('Ücretsiz planda max 3 platform. Premium: $1/ay 👑'); return;
+    }
+    el.classList.toggle('sel');
+    if(el.classList.contains('sel')) { if(!selPlatforms.includes(name)) selPlatforms.push(name); }
+    else selPlatforms = selPlatforms.filter(p=>p!==name);
+    document.getElementById('sbtn-txt').textContent = `Şimdi Paylaş (${selPlatforms.length} platform)`;
+  }
+
+  // File
+  function handleFile(input) {
+    if(input.files && input.files[0]) {
+      document.getElementById('uz').classList.add('has-file');
+      document.getElementById('uz-icon').textContent = '✅';
+      document.getElementById('uz-title').textContent = input.files[0].name;
+      document.getElementById('uz-sub').textContent = 'Hazır! Şimdi paylaşabilirsin';
+    }
+  }
+
+  // Share
+  function startShare() {
+    if(selPlatforms.length===0){showToast('En az 1 platform seç!');return;}
+    showAd();
+  }
+
+  function showAd() {
+    document.getElementById('ad-modal').classList.add('active');
+    let c=5;
+    document.getElementById('ad-count').textContent=c;
+    document.getElementById('ad-skip').disabled=true;
+    adTimer=setInterval(()=>{
+      c--;
+      document.getElementById('ad-count').textContent=c;
+      if(c<=0){clearInterval(adTimer);document.getElementById('ad-skip').disabled=false;}
+    },1000);
+  }
+
+  function closeAd() {
+    document.getElementById('ad-modal').classList.remove('active');
+    clearInterval(adTimer);
+    doUpload();
+  }
+
+  function doUpload() {
+    goScreen('uploading');
+    document.getElementById('tabbar').style.display='none';
+    const list=document.getElementById('prog-list');
+    list.innerHTML='';
+    const emojis={TikTok:'🎵',Instagram:'📸',YouTube:'▶️',Twitter:'🐦',Telegram:'✈️'};
+    selPlatforms.forEach(p=>{
+      const row=document.createElement('div');
+      row.className='prog-row';
+      row.innerHTML=`<div class="prog-emoji">${emojis[p]||'📱'}</div><div class="prog-name">${p}</div><div class="prog-status wait" id="ps-${p}">Bekliyor...</div>`;
+      list.appendChild(row);
+    });
+    let i=0;
+    function next(){
+      if(i>=selPlatforms.length){setTimeout(()=>showSuccess(),500);return;}
+      const p=selPlatforms[i];
+      const el=document.getElementById('ps-'+p);
+      el.className='prog-status upl'; el.textContent='Yükleniyor...';
+      setTimeout(()=>{
+        el.className='prog-status done'; el.textContent='✓';
+        i++; setTimeout(next,300);
+      },700+Math.random()*400);
+    }
+    setTimeout(next,400);
+  }
+
+  function showSuccess() {
+    goScreen('success');
+    document.getElementById('tabbar').style.display='flex';
+    const list=document.getElementById('res-list');
+    list.innerHTML='';
+    selPlatforms.forEach(p=>{
+      const row=document.createElement('div');
+      row.className='res-row';
+      row.innerHTML=`<div class="res-dot ok"></div><div class="res-name">${p}</div><div class="res-badge ok">Yüklendi</div>`;
+      list.appendChild(row);
+    });
+    document.getElementById('succ-sub').textContent=`İçeriğin ${selPlatforms.length} platforma başarıyla yüklendi.`;
+    document.getElementById('wa-card').style.display=selPlatforms.includes('Instagram')?'flex':'none';
+    const now=new Date();
+    history2.unshift({platforms:[...selPlatforms],date:now.toLocaleDateString('tr-TR'),time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+    updateHistory();
+  }
+
+  function updateHistory() {
+    const list=document.getElementById('hist-list');
+    if(history2.length===0)return;
+    list.innerHTML='';
+    history2.forEach((item,i)=>{
+      const el=document.createElement('div');
+      el.className='glass hist-item';
+      const badges=item.platforms.map(p=>`<span class="hbadge">${p}</span>`).join('');
+      el.innerHTML=`<div class="hist-top"><div class="hist-title">Paylaşım #${history2.length-i}</div><div class="hist-date">${item.date} ${item.time}</div></div><div class="hist-badges">${badges}</div>`;
+      list.appendChild(el);
+    });
+  }
+
+  // Toast
+  let toastTimer;
+  function showToast(msg) {
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+  }
+
+  // Logout
+  function logout() {
+    document.getElementById('tabbar').style.display='none';
+    goScreen('login');
+  }
+</script>
+</body>
+</html>
