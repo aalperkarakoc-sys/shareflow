@@ -1,0 +1,21 @@
+{
+  "name": "ShareFlow",
+  "short_name": "ShareFlow",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1C2F45",
+  "theme_color": "#1C2F45",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=shareflow&backgroundColor=7BD3EA",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=shareflow&backgroundColor=7BD3EA",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
