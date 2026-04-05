@@ -8,12 +8,23 @@
 <meta name="apple-mobile-web-app-title" content="ShareFlow">
 <meta name="theme-color" content="#1C2F45">
 <title>ShareFlow</title>
-  <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ShareFlow">
-<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBrT3qJFU5WoqoTdNTT3qLWab0JKVIpmJU",
+    authDomain: "myltion.firebaseapp.com",
+    projectId: "myltion",
+    storageBucket: "myltion.firebasestorage.app",
+    messagingSenderId: "765093714730",
+    appId: "1:765093714730:web:01e6396cc3599991b51c53"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const provider = new firebase.auth.GoogleAuthProvider();
+</script>
 <style>
 :root {
   --bg1:#1C2F45; --bg2:#2D1F4E;
@@ -618,15 +629,48 @@ function tick(){
 tick();setInterval(tick,30000);
 
 function login(m){
-  const names={Google:'Google',Apple:'Apple',email:'Kullanıcı',Misafir:'Misafir'};
-  const n=names[m]||'Kullanıcı';
+  if(m==='Google'){
+    auth.signInWithPopup(provider)
+      .then(result=>{
+        const user=result.user;
+        setUser(user.displayName||'Kullanıcı', user.photoURL);
+      })
+      .catch(err=>{
+        showToast('Giriş hatası: '+err.message);
+      });
+  } else if(m==='email'){
+    const email=document.querySelector('#s-login .inp[type="email"]').value;
+    const pass=document.querySelector('#s-login .inp[type="password"]').value;
+    if(!email||!pass){showToast('E-posta ve şifre gir!');return;}
+    auth.signInWithEmailAndPassword(email,pass)
+      .then(result=>setUser(result.user.email.split('@')[0]))
+      .catch(()=>{
+        auth.createUserWithEmailAndPassword(email,pass)
+          .then(result=>setUser(result.user.email.split('@')[0]))
+          .catch(err=>showToast('Hata: '+err.message));
+      });
+  } else {
+    setUser('Misafir');
+  }
+}
+
+function setUser(name, photo){
+  const n=name||'Kullanıcı';
+  const initial=n[0].toUpperCase();
   document.getElementById('uname').textContent=n;
-  document.getElementById('av').textContent=n[0].toUpperCase();
+  document.getElementById('av').textContent=initial;
   document.getElementById('profile-name').textContent=n;
-  document.getElementById('profile-av-hex').textContent=n[0].toUpperCase();
+  document.getElementById('profile-av-hex').textContent=initial;
   document.getElementById('tabbar').style.display='flex';
   switchTab('share');
+  showToast('Hoş geldin, '+n+'! 👋');
 }
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    setUser(user.displayName||user.email?.split('@')[0]||'Kullanıcı');
+  }
+});
 
 function goScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -788,8 +832,11 @@ function showToast(msg){
 }
 
 function logout(){
-  document.getElementById('tabbar').style.display='none';
-  goScreen('login');
+  auth.signOut().then(()=>{
+    document.getElementById('tabbar').style.display='none';
+    goScreen('login');
+    showToast('Çıkış yapıldı 👋');
+  });
 }
 </script>
 </body>
