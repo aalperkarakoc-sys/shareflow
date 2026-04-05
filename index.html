@@ -630,7 +630,7 @@ tick();setInterval(tick,30000);
 
 function login(m){
   if(m==='Google'){
-    auth.signInWithPopup(provider)
+    signInWithPopup(auth, provider)
       .then(result=>{
         const user=result.user;
         setUser(user.displayName||'Kullanıcı', user.photoURL);
@@ -642,7 +642,7 @@ function login(m){
     const email=document.querySelector('#s-login .inp[type="email"]').value;
     const pass=document.querySelector('#s-login .inp[type="password"]').value;
     if(!email||!pass){showToast('E-posta ve şifre gir!');return;}
-    auth.signInWithEmailAndPassword(email,pass)
+    signInWithEmailAndPassword(auth, email,pass)
       .then(result=>setUser(result.user.email.split('@')[0]))
       .catch(()=>{
         auth.createUserWithEmailAndPassword(email,pass)
@@ -839,5 +839,24 @@ function logout(){
   });
 }
 </script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBrT3qJFU5WoqoTdNTT3qLWab0JKVIpmJU",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+</script>
+
 </body>
 </html>
