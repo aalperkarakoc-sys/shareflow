@@ -1,21 +1,26 @@
 {
-  "name": "ShareFlow",
-  "short_name": "ShareFlow",
+  "name": "MYLTION",
+  "short_name": "MYLTION",
+  "description": "Tek tıkla tüm platformlara paylaş",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1C2F45",
   "theme_color": "#1C2F45",
   "orientation": "portrait",
+  "scope": "/",
+  "lang": "tr",
   "icons": [
     {
-      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=shareflow&backgroundColor=7BD3EA",
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=myltion&backgroundColor=7BD3EA",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=shareflow&backgroundColor=7BD3EA",
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=myltion&backgroundColor=7BD3EA",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
